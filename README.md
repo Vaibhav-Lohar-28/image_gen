@@ -63,7 +63,7 @@ Two deliberate API-conversion choices (documented here for transparency):
 
 ### ComfyUI
 
-Version **v0.34.0** — Krea 2 requires native ComfyUI support (older versions such as 0.3.30 cannot load it).
+Version **v0.34.0** — Krea 2 requires native ComfyUI support (older versions such as 0.3.30 cannot load it). The image is built on **CUDA 12.8.1** (`nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04`) with the matching **cu128 PyTorch wheels**, the combination current ComfyUI releases run best on. Your RunPod GPU needs an NVIDIA driver that supports CUDA 12.8 (driver ≥ 570).
 
 ## Building the image
 

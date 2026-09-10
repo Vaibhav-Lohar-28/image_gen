@@ -5,7 +5,8 @@
 # =============================================================================
 
 # Stage 1: Base image with ComfyUI + RunPod handler + custom nodes
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS base
+# CUDA 12.8.1 — the version current ComfyUI releases run best on
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 AS base
 
 # Prevents prompts from packages asking for user input during installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,7 +35,8 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip install comfy-cli
 
 # Install ComfyUI (v0.34.0 = native Krea 2 support + ImageStitch/Math core nodes)
-RUN /usr/bin/yes | comfy --workspace /comfyui install --version 0.34.0 --cuda-version 12.6 --nvidia
+# Torch is installed with cu128 wheels to match the CUDA 12.8 base image
+RUN /usr/bin/yes | comfy --workspace /comfyui install --version 0.34.0 --cuda-version 12.8 --nvidia
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
