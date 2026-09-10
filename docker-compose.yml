@@ -1,6 +1,10 @@
 services:
   comfyui-worker:
-    image: timpietruskyblibla/runpod-worker-comfy:3.4.0-flux1-dev
+    # Build it first:
+    #   docker build --target final --platform linux/amd64 \
+    #     [--build-arg HUGGINGFACE_ACCESS_TOKEN=<your-token>] \
+    #     -t runpod-worker-comfy:krea2-identity .
+    image: runpod-worker-comfy:krea2-identity
     deploy:
       resources:
         reservations:

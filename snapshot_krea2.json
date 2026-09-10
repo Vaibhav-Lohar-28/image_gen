@@ -1,0 +1,39 @@
+{
+  "comfyui": "v0.34.0",
+  "timestamp": "2026-09-10T18:30:00.000Z",
+  "git_custom_nodes": {
+    "https://github.com/lbouaraba/comfyui-krea2edit": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/lonecatone23/ComfyUI_LC123_nodes": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/rgthree/rgthree-comfy": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/ssitu/ComfyUI_UltimateSDUpscale": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/1038lab/ComfyUI-RMBG": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/alexopus/ComfyUI-Image-Saver": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/PBandDev/comfyui-lora-tag-hash-metadata": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/vslinx/ComfyUI-vslinx-nodes": {
+      "hash": "main",
+      "disabled": false
+    }
+  },
+  "file_custom_nodes": []
+}

@@ -1,0 +1,7 @@
+.git
+data
+venv
+.env
+__pycache__
+*.pyc
+test_resources/images

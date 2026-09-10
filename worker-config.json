@@ -1,8 +1,8 @@
 {
   "versions": {
     "1.0.0": {
-      "imageName": "timpietruskyblibla/runpod-worker-comfy:3.4.0-flux1-schnell",
-      "minimumCudaVersion": "11.8",
+      "imageName": "runpod-worker-comfy:krea2-identity",
+      "minimumCudaVersion": "12.8",
       "categories": [
         {
           "title": "ComfyUI Settings",
