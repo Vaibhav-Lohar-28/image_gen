@@ -71,7 +71,7 @@ FROM base AS downloader
 # --- Credentials (all optional / can stay blank) -----------------------------
 # Hugging Face token: only needed for gated repos. The default mirrors below
 # are public, so you can leave it blank.
-ARG HUGGINGFACE_ACCESS_TOKEN=""
+ARG HUGGINGFACE_ACCESS_TOKEN="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"
 # Civitai API token: some Civitai downloads benefit from a token. Optional.
 ARG CIVITAI_API_TOKEN=""
 
