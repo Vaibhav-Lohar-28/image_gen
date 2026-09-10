@@ -1,4 +1,4 @@
-# Stage 1: Base image with common dependencies
+# Stage 1: Base image with ComfyUI + RunPod handler
 FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS base
 
 # Prevents prompts from packages asking for user input during installation
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Prefer binary wheels over source distributions for faster pip installations
 ENV PIP_PREFER_BINARY=1
 # Ensures output from python is printed immediately to the terminal without buffering
-ENV PYTHONUNBUFFERED=1 
+ENV PYTHONUNBUFFERED=1
 # Speed up some cmake builds
 ENV CMAKE_BUILD_PARALLEL_LEVEL=8
 
@@ -27,13 +27,14 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 # Install comfy-cli
 RUN pip install comfy-cli
 
-# Install ComfyUI
-RUN /usr/bin/yes | comfy --workspace /comfyui install --version 0.3.30 --cuda-version 12.6 --nvidia
+# Install ComfyUI (v0.34.0 = native Krea 2 support, as required by the
+# "Lonecat's Krea2 Identity Edit & Head Swap" workflow)
+RUN /usr/bin/yes | comfy --workspace /comfyui install --version 0.34.0 --cuda-version 12.6 --nvidia
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
 
-# Install runpod
+# Install the RunPod handler dependencies
 RUN pip install runpod requests
 
 # Support for the network volume
@@ -46,7 +47,7 @@ WORKDIR /
 ADD src/start.sh src/restore_snapshot.sh src/rp_handler.py test_input.json ./
 RUN chmod +x /start.sh /restore_snapshot.sh
 
-# Optionally copy the snapshot file
+# Add the snapshot file (custom nodes needed by the workflow)
 ADD *snapshot*.json /
 
 # Restore the snapshot to install custom nodes
@@ -55,27 +56,44 @@ RUN /restore_snapshot.sh
 # Start container
 CMD ["/start.sh"]
 
-# Stage 2: Download models
-FROM base as downloader
+# Stage 2: Download the models needed by the Krea 2 Identity Edit workflow
+FROM base AS downloader
 
-ARG HUGGINGFACE_ACCESS_TOKEN
-ARG MODEL_TYPE=flux1-dev
+# Your Hugging Face token.
+# Leave it blank when downloading from the public mirrors used below (Comfy-Org/Krea-2).
+# Fill it in (docker build --build-arg HUGGINGFACE_ACCESS_TOKEN=hf_xxx) when you
+# download from gated repositories such as https://huggingface.co/krea/Krea-2-Turbo.
+ARG HUGGINGFACE_ACCESS_TOKEN=""
 
-# Change working directory to ComfyUI
+SHELL ["/bin/bash", "-c"]
+
 WORKDIR /comfyui
 
-# Create necessary directories
-RUN mkdir -p models/checkpoints models/vae models/unet models/clip
+RUN mkdir -p models/diffusion_models models/text_encoders models/vae models/loras/Krea2
 
-# Download flux1-dev model and its components
-RUN wget --header="Authorization: Bearer Your-Huggingface-Token" -O models/unet/flux1-dev.safetensors https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors && \
-    wget -O models/clip/clip_l.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors && \
-    wget -O models/clip/t5xxl_fp8_e4m3fn.safetensors https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors && \
-    wget --header="Authorization: Bearer Your-Huggingface-Token" -O models/vae/ae.safetensors https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/ae.safetensors && \
+# Downloads use the Hugging Face token automatically when it is provided.
+RUN AUTH=""; \
+    if [ -n "${HUGGINGFACE_ACCESS_TOKEN}" ]; then AUTH="Authorization: Bearer ${HUGGINGFACE_ACCESS_TOKEN}"; fi; \
+    dl() { echo "runpod-worker-comfy: downloading $1"; curl -fL --retry 3 --retry-delay 5 ${AUTH:+--header "$AUTH"} -o "$1" "$2"; }; \
+    dl models/diffusion_models/krea2_turbo_fp8_scaled.safetensors \
+       https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors && \
+    dl models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors \
+       https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors && \
+    dl models/vae/qwen_image_vae.safetensors \
+       https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors && \
+    dl models/loras/Krea2/krea2_identity_edit_v1_2.safetensors \
+       https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors
 
-    
+# Optional: Krea 2 Raw (fp8) — used for removal/deletion edits at CFG ~3.
+# Uncomment to bake it into the image (adds ~13 GB):
+# RUN AUTH=""; \
+#     if [ -n "${HUGGINGFACE_ACCESS_TOKEN}" ]; then AUTH="Authorization: Bearer ${HUGGINGFACE_ACCESS_TOKEN}"; fi; \
+#     curl -fL --retry 3 --retry-delay 5 ${AUTH:+--header "$AUTH"} \
+#       -o models/diffusion_models/krea2_raw_fp8_scaled.safetensors \
+#       https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_fp8_scaled.safetensors
+
 # Stage 3: Final image
-FROM base as final
+FROM base AS final
 
 # Copy models from stage 2 to the final image
 COPY --from=downloader /comfyui/models /comfyui/models

@@ -10,15 +10,19 @@ import base64
 from io import BytesIO
 
 # Time to wait between API check attempts in milliseconds
-COMFY_API_AVAILABLE_INTERVAL_MS = 50
+COMFY_API_AVAILABLE_INTERVAL_MS = int(
+    os.environ.get("COMFY_API_AVAILABLE_INTERVAL_MS", 50)
+)
 # Maximum number of API check attempts
-COMFY_API_AVAILABLE_MAX_RETRIES = 500
+COMFY_API_AVAILABLE_MAX_RETRIES = int(
+    os.environ.get("COMFY_API_AVAILABLE_MAX_RETRIES", 500)
+)
 # Time to wait between poll attempts in milliseconds
 COMFY_POLLING_INTERVAL_MS = int(os.environ.get("COMFY_POLLING_INTERVAL_MS", 250))
 # Maximum number of poll attempts
 COMFY_POLLING_MAX_RETRIES = int(os.environ.get("COMFY_POLLING_MAX_RETRIES", 500))
 # Host where ComfyUI is running
-COMFY_HOST = "127.0.0.1:8188"
+COMFY_HOST = os.environ.get("COMFY_HOST", "127.0.0.1:8188")
 # Enforce a clean state after each job is done
 # see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
@@ -298,11 +302,14 @@ def handler(job):
     images = validated_data.get("images")
 
     # Make sure that the ComfyUI API is available
-    check_server(
+    if not check_server(
         f"http://{COMFY_HOST}",
         COMFY_API_AVAILABLE_MAX_RETRIES,
         COMFY_API_AVAILABLE_INTERVAL_MS,
-    )
+    ):
+        return {
+            "error": f"ComfyUI API is not reachable at http://{COMFY_HOST}"
+        }
 
     # Upload images if they exist
     upload_result = upload_images(images)

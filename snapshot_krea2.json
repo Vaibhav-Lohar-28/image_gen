@@ -1,0 +1,15 @@
+{
+  "comfyui": "v0.34.0",
+  "timestamp": "2026-09-10T12:00:00.000Z",
+  "git_custom_nodes": {
+    "https://github.com/lbouaraba/comfyui-krea2edit": {
+      "hash": "main",
+      "disabled": false
+    },
+    "https://github.com/lonecatone23/ComfyUI_LC123_nodes": {
+      "hash": "main",
+      "disabled": false
+    }
+  },
+  "file_custom_nodes": []
+}

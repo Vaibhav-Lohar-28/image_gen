@@ -15,7 +15,7 @@ variable "HUGGINGFACE_ACCESS_TOKEN" {
 }
 
 group "default" {
-  targets = ["base", "flux1-dev"]
+  targets = ["base", "krea2-identity"]
 }
 
 target "base" {
@@ -26,15 +26,14 @@ target "base" {
   tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}-base"]
 }
 
-target "flux1-dev" {
+target "krea2-identity" {
   context = "."
   dockerfile = "Dockerfile"
   target = "final"
   args = {
-    MODEL_TYPE = "flux1-dev"
     HUGGINGFACE_ACCESS_TOKEN = "${HUGGINGFACE_ACCESS_TOKEN}"
   }
-  tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}-flux1-dev"]
+  platforms = ["linux/amd64"]
+  tags = ["${DOCKERHUB_REPO}/${DOCKERHUB_IMG}:${RELEASE_VERSION}-krea2-identity"]
   inherits = ["base"]
 }
-
