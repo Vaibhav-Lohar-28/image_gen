@@ -72,7 +72,7 @@ FROM base AS downloader
 # Hugging Face token: only needed for gated repos. The default mirrors below
 # are public, so you can leave it blank.
 ARG HUGGINGFACE_ACCESS_TOKEN=""
-# Civitai API token: some Civitai downloads benefit from a token. Optional.
+# Civitai API token: some Civitai downloads benefit from a token. Optional. 
 ARG CIVITAI_API_TOKEN="309b095068c86e2c40756380f97199c8"
 
 # --- Direct download links (override if files move) --------------------------
