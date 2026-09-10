@@ -1,143 +1,171 @@
 {
   "input": {
     "workflow": {
-      "55": {
-        "inputs": {
-          "unet_name": "krea2_turbo_fp8_scaled.safetensors",
-          "weight_dtype": "default"
-        },
-        "class_type": "UNETLoader",
-        "_meta": {
-          "title": "Load Diffusion Model (Krea 2)"
-        }
-      },
-      "56": {
-        "inputs": {
-          "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
-          "type": "krea2",
-          "device": "default"
-        },
-        "class_type": "CLIPLoader",
-        "_meta": {
-          "title": "Load CLIP (Qwen3-VL 4B)"
-        }
-      },
-      "57": {
-        "inputs": {
-          "vae_name": "qwen_image_vae.safetensors"
-        },
-        "class_type": "VAELoader",
-        "_meta": {
-          "title": "Load VAE (Qwen Image)"
-        }
-      },
-      "71": {
-        "inputs": {
-          "lora_name": "Krea2/krea2_identity_edit_v1_2.safetensors",
-          "strength_model": 1.0,
-          "model": [
-            "55",
-            0
-          ]
-        },
-        "class_type": "LoraLoaderModelOnly",
-        "_meta": {
-          "title": "Load LoRA (Krea 2 Identity Edit)"
-        }
-      },
-      "72": {
+      "1": {
         "inputs": {
           "image": "source_image.png"
         },
         "class_type": "LoadImage",
         "_meta": {
-          "title": "Load Source Image (scene to edit)"
+          "title": "Load Source Image (photo to keep)"
         }
       },
-      "90": {
+      "174": {
         "inputs": {
           "image": "reference_image.png"
         },
         "class_type": "LoadImage",
         "_meta": {
-          "title": "Load Reference Image (person identity)"
+          "title": "Load Reference Headshot (face + hair to use)"
         }
       },
-      "73": {
+      "234": {
         "inputs": {
-          "pixels": [
-            "72",
+          "image": [
+            "174",
             0
           ],
-          "vae": [
-            "57",
+          "model": "RMBG-2.0",
+          "sensitivity": 1,
+          "process_res": 1024,
+          "mask_blur": 0,
+          "mask_offset": 0,
+          "invert_output": false,
+          "refine_foreground": false,
+          "background": "Color",
+          "background_color": "#222222"
+        },
+        "class_type": "RMBG",
+        "_meta": {
+          "title": "RMBG (remove headshot background)"
+        }
+      },
+      "235": {
+        "inputs": {
+          "inputcount": 2,
+          "any_01": [
+            "1",
+            0
+          ],
+          "any_02": [
+            "1",
             0
           ]
         },
-        "class_type": "VAEEncode",
+        "class_type": "LCAnySwitch",
         "_meta": {
-          "title": "VAE Encode (source latent)"
+          "title": "LC AnySwitch (source, raw)"
         }
       },
-      "92": {
+      "236": {
         "inputs": {
-          "pixels": [
-            "90",
+          "inputcount": 2,
+          "any_01": [
+            "234",
             0
           ],
-          "vae": [
-            "57",
+          "any_02": [
+            "174",
             0
           ]
         },
-        "class_type": "VAEEncode",
+        "class_type": "LCAnySwitch",
         "_meta": {
-          "title": "VAE Encode (reference latent)"
+          "title": "LC AnySwitch (headshot, RMBG first)"
         }
       },
-      "82": {
+      "203": {
         "inputs": {
-          "width": 1024,
-          "height": 1024,
-          "batch_size": 1
+          "boolean": true
         },
-        "class_type": "EmptySD3LatentImage",
+        "class_type": "vsLinx_BooleanFlip",
         "_meta": {
-          "title": "Empty Latent Image (output size)"
+          "title": "vsLinx BooleanFlip (resolution_source -> image)"
         }
       },
-      "79": {
+      "204": {
+        "inputs": {
+          "max_resolution": 1640,
+          "resolution_source": [
+            "203",
+            0
+          ],
+          "aspect_ratio": "Instagram Portrait - 1080x1350",
+          "custom_width": 1024,
+          "custom_height": 1024,
+          "swap_dimensions": "Off",
+          "upscale_method": "lanczos",
+          "proportion": "crop",
+          "crop_location": "center",
+          "pad_color": "0, 0, 0",
+          "divisible_by": 8,
+          "batch_size": 1,
+          "image": [
+            "1",
+            0
+          ]
+        },
+        "class_type": "AspectRatioSimplifier",
+        "_meta": {
+          "title": "Aspect Ratio Simplifier (size from source image)"
+        }
+      },
+      "130": {
+        "inputs": {
+          "unet_name": "Krea 2/Your models/Animosity_Krea2_V1.0_int8_convrot.safetensors",
+          "weight_dtype": "default"
+        },
+        "class_type": "UNETLoader",
+        "_meta": {
+          "title": "Load Diffusion Model (Animosity Krea2 int8_convrot)"
+        }
+      },
+      "171": {
+        "inputs": {
+          "lora_name": "Krea 2/Utilities/krea2_identity_edit_v1_2.safetensors",
+          "strength_model": 1.0,
+          "model": [
+            "130",
+            0
+          ]
+        },
+        "class_type": "LoraLoaderModelOnly",
+        "_meta": {
+          "title": "Load LoRA (Krea 2 Identity Edit v1.2)"
+        }
+      },
+      "169": {
         "inputs": {
           "model": [
-            "71",
+            "171",
             0
           ],
           "source_latent": [
-            "73",
+            "52",
             0
           ],
           "source_latent_b": [
-            "92",
+            "176",
             0
           ],
           "ref_boost": 4,
-          "ref_boost_a": 1,
+          "ref_boost_a": 0,
           "fit_mode": "fit",
           "vae": [
-            "57",
+            "132",
             0
           ],
           "source_image": [
-            "72",
+            "235",
             0
           ],
           "source_image_b": [
-            "90",
+            "236",
             0
           ],
           "target_latent": [
-            "82",
-            0
+            "204",
+            4
           ]
         },
         "class_type": "Krea2EditModelPatch",
@@ -145,19 +173,131 @@
           "title": "Krea2 Edit (source patch)"
         }
       },
-      "84": {
+      "208": {
         "inputs": {
-          "clip": [
-            "56",
+          "model": [
+            "169",
             0
           ],
-          "prompt": "Change her outfit to a red raincoat.",
+          "clip": [
+            "131",
+            0
+          ],
+          "LORA_1": {
+            "on": false,
+            "lora": "Krea 2/Realism helpers/lenovo_krea2.safetensors",
+            "strength": 0.65
+          }
+        },
+        "class_type": "Power Lora Loader (rgthree)",
+        "_meta": {
+          "title": "Power Lora Loader (optional realism LoRA, off)"
+        }
+      },
+      "131": {
+        "inputs": {
+          "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+          "type": "krea2",
+          "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": {
+          "title": "Load CLIP (Qwen3-VL 4B, type krea2)"
+        }
+      },
+      "132": {
+        "inputs": {
+          "vae_name": "krea2RealVae_v10.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+          "title": "Load VAE (krea2RealVae v1.0)"
+        }
+      },
+      "52": {
+        "inputs": {
+          "pixels": [
+            "204",
+            0
+          ],
+          "vae": [
+            "132",
+            0
+          ]
+        },
+        "class_type": "VAEEncode",
+        "_meta": {
+          "title": "VAE Encode (resized source latent)"
+        }
+      },
+      "176": {
+        "inputs": {
+          "pixels": [
+            "174",
+            0
+          ],
+          "vae": [
+            "132",
+            0
+          ]
+        },
+        "class_type": "VAEEncode",
+        "_meta": {
+          "title": "VAE Encode (headshot latent)"
+        }
+      },
+      "244": {
+        "inputs": {
+          "positive": "Image 1 = the photo to keep. Image 2 = the face and hair to use.\n\nPut the person from image 2 onto the body in image 1.\n\nFrom image 2 only: face, skin, eyes, eye colour, nose, mouth, jaw, ears, hair colour, hair length, hair style.\n\nFrom image 1 only: room, background, lighting, colour, camera, crop, clothing, shoulders, chest, arms, hands, pose, body.\n\nDo not change image 1\u2019s clothes or background. Do not mix the two faces. Do not use image 2\u2019s clothes, jewellery, or glasses"
+        },
+        "class_type": "LCPositive",
+        "_meta": {
+          "title": "LC Positive (Head Swap prompt)"
+        }
+      },
+      "211": {
+        "inputs": {
+          "positive": ""
+        },
+        "class_type": "LCPositive",
+        "_meta": {
+          "title": "LC Positive (extra prompt, empty)"
+        }
+      },
+      "245": {
+        "inputs": {
+          "inputcount": 2,
+          "delimiter": ", ",
+          "string_1": [
+            "244",
+            0
+          ],
+          "string_2": [
+            "211",
+            0
+          ]
+        },
+        "class_type": "LCJoinStrings",
+        "_meta": {
+          "title": "LC Join Strings (final instruction)"
+        }
+      },
+      "168": {
+        "inputs": {
+          "clip": [
+            "208",
+            1
+          ],
+          "prompt": [
+            "245",
+            0
+          ],
           "image": [
-            "72",
+            "235",
             0
           ],
           "image_b": [
-            "90",
+            "236",
             0
           ],
           "grounding_px": 768,
@@ -165,70 +305,59 @@
         },
         "class_type": "Krea2EditGroundedEncode",
         "_meta": {
-          "title": "Krea2 Edit (grounded encode) - instruction"
+          "title": "Krea2 Edit (grounded encode)"
         }
       },
-      "85": {
+      "175": {
         "inputs": {
-          "clip": [
-            "56",
+          "conditioning": [
+            "168",
             0
-          ],
-          "prompt": "",
-          "image": [
-            "72",
-            0
-          ],
-          "image_b": [
-            "90",
-            0
-          ],
-          "grounding_px": 768,
-          "system_prompt": ""
+          ]
         },
-        "class_type": "Krea2EditGroundedEncode",
+        "class_type": "ConditioningZeroOut",
         "_meta": {
-          "title": "Krea2 Edit (grounded encode) - negative"
+          "title": "Conditioning Zero Out (negative)"
         }
       },
-      "53": {
+      "167": {
         "inputs": {
-          "seed": 1088049369132323,
-          "steps": 10,
-          "cfg": 1.0,
+          "seed": 191789205116804,
+          "steps": 8,
+          "cfg": 1,
           "sampler_name": "euler",
           "scheduler": "simple",
-          "denoise": 1.0,
+          "denoise": 1,
           "model": [
-            "79",
+            "208",
             0
           ],
           "positive": [
-            "84",
+            "168",
             0
           ],
           "negative": [
-            "85",
+            "175",
             0
           ],
           "latent_image": [
-            "82",
-            0
+            "204",
+            4
           ]
         },
         "class_type": "KSampler",
         "_meta": {
-          "title": "KSampler"
+          "title": "KSampler (8 steps, cfg 1, euler/simple)"
         }
       },
-      "54": {
+      "35": {
         "inputs": {
           "samples": [
-            "53",
+            "167",
             0
           ],
           "vae": [
-            "57",
+            "132",
             0
           ]
         },
@@ -237,28 +366,340 @@
           "title": "VAE Decode"
         }
       },
-      "29": {
+      "214": {
         "inputs": {
-          "filename_prefix": "krea2_identity_edit",
-          "images": [
-            "54",
+          "any": [
+            "35",
             0
           ]
         },
-        "class_type": "SaveImage",
+        "class_type": "LCVRAMCacheClear",
         "_meta": {
-          "title": "Save Image"
+          "title": "LC VRAM Cache Clear"
+        }
+      },
+      "215": {
+        "inputs": {
+          "image": [
+            "214",
+            0
+          ]
+        },
+        "class_type": "LCGetImage",
+        "_meta": {
+          "title": "LC Get Image (W/H)"
+        }
+      },
+      "161": {
+        "inputs": {
+          "expression": "a/b\n",
+          "values.a": [
+            "215",
+            1
+          ],
+          "values.b": 1.25
+        },
+        "class_type": "ComfyMathExpression",
+        "_meta": {
+          "title": "Math: tile_width = width / 1.25"
+        }
+      },
+      "162": {
+        "inputs": {
+          "expression": "a/b\n",
+          "values.a": [
+            "215",
+            2
+          ],
+          "values.b": 1.25
+        },
+        "class_type": "ComfyMathExpression",
+        "_meta": {
+          "title": "Math: tile_height = height / 1.25"
+        }
+      },
+      "61": {
+        "inputs": {
+          "model_name": "1x-ITF-SkinDiffDetail-Lite-v1.pth"
+        },
+        "class_type": "UpscaleModelLoader",
+        "_meta": {
+          "title": "Load Upscale Model (1x ITF SkinDiffDetail Lite)"
+        }
+      },
+      "58": {
+        "inputs": {
+          "image": [
+            "214",
+            0
+          ],
+          "model": [
+            "208",
+            0
+          ],
+          "positive": [
+            "168",
+            0
+          ],
+          "negative": [
+            "175",
+            0
+          ],
+          "vae": [
+            "132",
+            0
+          ],
+          "upscale_by": 1.5,
+          "seed": 191789205116804,
+          "steps": 4,
+          "cfg": 1,
+          "sampler_name": "euler",
+          "scheduler": "simple",
+          "denoise": 0.15,
+          "upscale_model": [
+            "61",
+            0
+          ],
+          "mode_type": "None",
+          "tile_width": [
+            "161",
+            1
+          ],
+          "tile_height": [
+            "162",
+            1
+          ],
+          "mask_blur": 8,
+          "tile_padding": 304,
+          "seam_fix_mode": "None",
+          "seam_fix_denoise": 1,
+          "seam_fix_mask_blur": 64,
+          "seam_fix_width": 8,
+          "seam_fix_padding": 16,
+          "force_uniform_tiles": true,
+          "tiled_decode": false,
+          "batch_size": 1
+        },
+        "class_type": "UltimateSDUpscale",
+        "_meta": {
+          "title": "Ultimate SD Upscale (1.5x)"
+        }
+      },
+      "221": {
+        "inputs": {
+          "image": [
+            "58",
+            0
+          ],
+          "preset": "Portrait",
+          "clarity": 0.38,
+          "sharpen": 0.06,
+          "strength": 1,
+          "halo": 0.65,
+          "skin_protect": 0.85,
+          "radius": 0.36,
+          "blend_mode": "Soft Light",
+          "shadow_protect": 0.42,
+          "highlight_protect": 0.4
+        },
+        "class_type": "LCClarity",
+        "_meta": {
+          "title": "LC Clarity (Sharpen Pro, Portrait)"
+        }
+      },
+      "229": {
+        "inputs": {
+          "image": [
+            "221",
+            0
+          ],
+          "preset": "Natural",
+          "strength": 1,
+          "coolness": 0.22,
+          "brightness": 0.12,
+          "rosy": 0.08,
+          "evenness": 0.18,
+          "shadow_lift": 0.15,
+          "smooth": 0.06,
+          "texture_preserve": 0.88,
+          "saturation": -0.08,
+          "highlight_protect": 0.75,
+          "mask_sensitivity": 0.55,
+          "mask_feather": 0.45
+        },
+        "class_type": "LCSkinBeauty",
+        "_meta": {
+          "title": "LC Skin Beauty (Natural)"
+        }
+      },
+      "222": {
+        "inputs": {
+          "image": [
+            "229",
+            0
+          ],
+          "hue": 0,
+          "saturation": 0,
+          "brightness": 0,
+          "contrast": 0,
+          "sharpness": 0
+        },
+        "class_type": "LCImageAdjust",
+        "_meta": {
+          "title": "LC Image Adjust (neutral)"
+        }
+      },
+      "223": {
+        "inputs": {
+          "image": [
+            "222",
+            0
+          ],
+          "lut_name": "LC_Crushed_Blacks.cube",
+          "strength": 0.23,
+          "log": true
+        },
+        "class_type": "LCApplyLUT",
+        "_meta": {
+          "title": "LC Apply LUT (Crushed Blacks @ 0.23)"
+        }
+      },
+      "202": {
+        "inputs": {
+          "civitai_resources": "urn:air:krea2:unknown:civitai:2803688@3168996"
+        },
+        "class_type": "CivitaiResourcesToHashMetadata",
+        "_meta": {
+          "title": "Civitai Resources To Hash Metadata"
+        }
+      },
+      "209": {
+        "inputs": {
+          "text": "",
+          "id": 0,
+          "node_title": "",
+          "only_enabled": true,
+          "debug": false,
+          "powerloraloader_model": [
+            "208",
+            0
+          ]
+        },
+        "class_type": "vsLinx_AppendLorasFromNodeToString",
+        "_meta": {
+          "title": "vsLinx Append Loras To String"
+        }
+      },
+      "210": {
+        "inputs": {
+          "inputcount": 2,
+          "delimiter": " , ",
+          "string_1": [
+            "245",
+            0
+          ],
+          "string_2": [
+            "209",
+            0
+          ]
+        },
+        "class_type": "LCJoinStrings",
+        "_meta": {
+          "title": "Join prompt + loras for metadata"
+        }
+      },
+      "15": {
+        "inputs": {
+          "modelname": "Krea 2/Your models/Animosity_Krea2_V1.0_int8_convrot.safetensors",
+          "positive": [
+            "210",
+            0
+          ],
+          "negative": "unknown",
+          "width": [
+            "204",
+            2
+          ],
+          "height": [
+            "204",
+            3
+          ],
+          "seed_value": 191789205116804,
+          "steps": 8,
+          "cfg": 1,
+          "sampler_name": "euler",
+          "scheduler_name": "simple",
+          "denoise": 1,
+          "clip_skip": 0,
+          "additional_hashes": [
+            "202",
+            0
+          ],
+          "download_civitai_data": true,
+          "easy_remix": true,
+          "custom": ""
+        },
+        "class_type": "Image Saver Metadata",
+        "_meta": {
+          "title": "Image Saver Metadata"
+        }
+      },
+      "218": {
+        "inputs": {
+          "folder": "Krea2 ID Edit",
+          "prefix": "Lonecats",
+          "suffix": "",
+          "timestamp": "%Y-%m-%d",
+          "path_separator": "auto",
+          "include_prefix_in_path": true
+        },
+        "class_type": "LCAdvancedFolder",
+        "_meta": {
+          "title": "LC Advanced Folder"
+        }
+      },
+      "17": {
+        "inputs": {
+          "images": [
+            "223",
+            0
+          ],
+          "filename": [
+            "218",
+            0
+          ],
+          "path": [
+            "218",
+            1
+          ],
+          "extension": "png",
+          "lossless_webp": true,
+          "quality_jpeg_or_webp": 100,
+          "optimize_png": false,
+          "embed_workflow": true,
+          "save_workflow_as_json": false,
+          "metadata": [
+            "15",
+            0
+          ],
+          "counter": 0,
+          "time_format": "%Y-%m-%d-%H%M%S",
+          "show_preview": true
+        },
+        "class_type": "Image Saver Simple",
+        "_meta": {
+          "title": "Image Saver Simple (final output)"
         }
       }
     },
     "images": [
       {
         "name": "source_image.png",
-        "image": ""
+        "image": "<base64 of the photo to keep>"
       },
       {
         "name": "reference_image.png",
-        "image": ""
+        "image": "<base64 of the headshot>"
       }
     ]
   }

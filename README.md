@@ -1,21 +1,31 @@
-# runpod-worker-comfy — Krea 2 Identity Edit edition
+# runpod-worker-comfy — Krea 2 Identity Edit / Head Swap edition
 
-> [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as a serverless API on [RunPod](https://www.runpod.io/), pre-configured for **Lonecat's Krea2 Identity Edit & Head Swap workflow** ([Civitai](https://civitai.com/models/2803688/lonecats-krea2-identity-edit), V6.0.2 "Head Swap & RMBG").
+> [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as a serverless API on [RunPod](https://www.runpod.io/), fully customized for **Lonecat's Krea2 Identity Edit & Head Swap workflow V6.0.2** (`lonecatsKrea2Identity_v602HeadSwapRMBG.json`, [Civitai](https://civitai.com/models/2803688/lonecats-krea2-identity-edit)).
 
-This is a customized fork of [blib-la/runpod-worker-comfy](https://github.com/blib-la/runpod-worker-comfy). Instead of the generic FLUX/SDXL images, this repo bakes in everything the Krea 2 Identity Edit workflow needs: the Krea 2 model, its Qwen3-VL text encoder, its VAE, the Identity Edit LoRA, and the required custom nodes.
+This is a customized fork of [blib-la/runpod-worker-comfy](https://github.com/blib-la/runpod-worker-comfy). The Docker image bakes in every model, LoRA, upscaler, RMBG weight and custom node that this workflow needs, and `test_input.json` contains the workflow converted to ComfyUI's **API format** so it can run headless on RunPod.
 
 ---
 
-## What is this workflow?
+## What the workflow does
 
-The [Krea 2](https://huggingface.co/Comfy-Org/Krea-2) model (a 12.9B FLUX-family MMDiT) plus the [Krea 2 Identity Edit LoRA](https://huggingface.co/conradlocke/krea2-identity-edit) and the [comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit) nodes give you **instruction-based, identity-preserving image editing**:
+Two photos in — one edited photo out:
 
-- **Identity edit:** "create a photo of this person at a night market" — same face, same outfit, new scene/lighting
-- **Head swap:** put the head (including hair) of person B onto the body/scene of person A
-- **Local edits:** recolor, add/remove/replace objects, attribute and outfit changes
-- **Two-input edits:** image 1 = scene, image 2 = person (order matters!)
+- **Image 1 (`source_image.png`)** = the photo to keep (body, clothes, background, pose)
+- **Image 2 (`reference_image.png`)** = the headshot whose face & hair get placed onto image 1
 
-Typical settings: **Turbo model, 8–12 steps, CFG 1.0, sampler `euler`, scheduler `simple`, LoRA strength 1.0**.
+Pipeline (mirrors the V6.0.2 graph exactly):
+
+1. **RMBG-2.0** removes the background of the headshot for better consistency (source photo stays raw, as in the original graph)
+2. **AspectRatioSimplifier** sizes the output to the source image (long side clamped to 1640, divisible by 8)
+3. **Animosity Krea2** checkpoint (int8_convrot) + **Krea 2 Identity Edit LoRA v1.2** via the [comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit) nodes (`Krea2EditModelPatch` + `Krea2EditGroundedEncode`, ref_boost 4 / ref_boost_a 0, `fit`)
+4. **KSampler** — 8 steps, CFG 1, euler, simple (Krea 2 Turbo-style settings)
+5. **Ultimate SD Upscale** 1.5× with the `1x-ITF-SkinDiffDetail-Lite` upscaler (4 steps, denoise 0.15)
+6. **Post-production:** LC Clarity (Portrait) → LC Skin Beauty (Natural) → LC Image Adjust → LC Apply LUT (`LC_Crushed_Blacks.cube` @ 0.23)
+7. **Image Saver Simple** saves the final PNG with Civitai-compatible metadata (via `Image Saver Metadata` + `CivitaiResourcesToHashMetadata`), into `output/Krea2 ID Edit/Lonecats/<date>/`
+
+The head-swap instruction used (editable in `test_input.json`, node `"244"`):
+
+> "Image 1 = the photo to keep. Image 2 = the face and hair to use. Put the person from image 2 onto the body in image 1. … Do not change image 1's clothes or background. Do not mix the two faces."
 
 ## What's inside the image
 
@@ -23,261 +33,167 @@ Typical settings: **Turbo model, 8–12 steps, CFG 1.0, sampler `euler`, schedul
 
 | File | ComfyUI folder | Source |
 | ---- | -------------- | ------ |
-| `krea2_turbo_fp8_scaled.safetensors` | `models/diffusion_models/` | [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) |
+| `Animosity_Krea2_V1.0_int8_convrot.safetensors` | `models/diffusion_models/Krea 2/Your models/` | [Civitai — Animosity (lonecatone23)](https://civitai.com/models/2596298/animosity), version *Krea2_V1.0_int8_convrot* |
 | `qwen3vl_4b_fp8_scaled.safetensors` | `models/text_encoders/` | [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) |
-| `qwen_image_vae.safetensors` | `models/vae/` | [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) |
-| `Krea2/krea2_identity_edit_v1_2.safetensors` | `models/loras/` | [conradlocke/krea2-identity-edit](https://huggingface.co/conradlocke/krea2-identity-edit) |
+| `krea2RealVae_v10.safetensors` | `models/vae/` | [martineux/altkreas](https://huggingface.co/martineux/altkreas) |
+| `Krea 2/Utilities/krea2_identity_edit_v1_2.safetensors` | `models/loras/` | [conradlocke/krea2-identity-edit](https://huggingface.co/conradlocke/krea2-identity-edit) |
+| `Krea 2/Realism helpers/lenovo_krea2.safetensors` | `models/loras/` | [Civitai — Lenovo UltraReal, Krea 2 version](https://civitai.com/models/1662740/lenovo-ultrareal?modelVersionId=3075606) (ships switched **off** in the workflow) |
+| `1x-ITF-SkinDiffDetail-Lite-v1.pth` | `models/upscale_models/` | [OpenModelDB](https://openmodeldb.info/models/1x-ITF-SkinDiffDetail-Lite-v1) |
+| RMBG-2.0 (config, weights, code) | `models/RMBG/RMBG-2.0/` | [1038lab/RMBG-2.0](https://huggingface.co/1038lab/RMBG-2.0) (public mirror of briaai/RMBG-2.0) |
+| `LC_Crushed_Blacks.cube` (+ other LUTs) | `models/luts/` | bundled with the LC123 node pack (auto-installed) |
 
-Optional (uncomment in the `Dockerfile`): `krea2_raw_fp8_scaled.safetensors` for removal/deletion edits at CFG ~3.
+### Custom nodes (installed from `snapshot_krea2.json` during build)
 
-### Custom nodes (installed from `snapshot_krea2.json`)
-
-| Node pack | Provides |
+| Node pack | Used for |
 | --------- | -------- |
 | [lbouaraba/comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit) | `Krea2EditModelPatch`, `Krea2EditGroundedEncode` — the core identity-edit nodes |
-| [lonecatone23/ComfyUI_LC123_nodes](https://github.com/lonecatone23/ComfyUI_LC123_nodes) | Lonecat's utility / post-production nodes used by his workflows |
+| [lonecatone23/ComfyUI_LC123_nodes](https://github.com/lonecatone23/ComfyUI_LC123_nodes) | Lonecat's nodes: AspectRatioSimplifier, LCAnySwitch, LCGetImage, LCVRAMCacheClear, LCClarity, LCSkinBeauty, LCImageAdjust, LCApplyLUT, LCAdvancedFolder, LCPositive, LCJoinStrings |
+| [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | Power Lora Loader (holds the optional Lenovo LoRA) |
+| [ssitu/ComfyUI_UltimateSDUpscale](https://github.com/ssitu/ComfyUI_UltimateSDUpscale) | the 1.5× hi-res pass |
+| [1038lab/ComfyUI-RMBG](https://github.com/1038lab/ComfyUI-RMBG) | `RMBG` background removal |
+| [alexopus/ComfyUI-Image-Saver](https://github.com/alexopus/ComfyUI-Image-Saver) | `Image Saver Simple` + `Image Saver Metadata` (Civitai metadata) |
+| [PBandDev/comfyui-lora-tag-hash-metadata](https://github.com/PBandDev/comfyui-lora-tag-hash-metadata) | `CivitaiResourcesToHashMetadata` |
+| [vslinx/ComfyUI-vslinx-nodes](https://github.com/vslinx/ComfyUI-vslinx-nodes) | `vsLinx_BooleanFlip`, `vsLinx_AppendLorasFromNodeToString` |
+
+Two deliberate API-conversion choices (documented here for transparency):
+
+- The UI-only helper `JoinStrings` (KJNodes) was replaced with the identical `LCJoinStrings` (LC123) so we don't drag the huge KJNodes pack into the image for one string-concat node.
+- `WidgetToString` (which reads the UNet name from the UI graph) was replaced by the constant model name string in the metadata node.
+- Pure frontend nodes (notes, labels, bypassers, preview/comparison strips, the stitched 3-panel `SaveImage`) are not part of the API graph; the single output returned by the worker is the Image Saver Simple result.
 
 ### ComfyUI
 
-Version **v0.34.0** — the first requirement is native Krea 2 support in ComfyUI core, which older versions (e.g. 0.3.30) do not have.
+Version **v0.34.0** — Krea 2 requires native ComfyUI support (older versions such as 0.3.30 cannot load it).
 
-## Hugging Face token
+## Building the image
 
-The model mirrors used by default (`Comfy-Org/Krea-2`) are public, so you can build **without** a token. A token **is** required if you switch the downloads to gated repositories such as the official [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo).
-
-The token is wired through the `HUGGINGFACE_ACCESS_TOKEN` build-arg and used automatically by every download in the `Dockerfile`. Leave it blank if you don't need it:
+All credential build-args are **optional and blank by default** — fill in what you need:
 
 ```bash
-# without a token (public mirrors)
 docker build --target final --platform linux/amd64 \
-  -t <your_dockerhub_username>/runpod-worker-comfy:krea2-identity .
-
-# with a token (for gated repos)
-docker build --target final --platform linux/amd64 \
-  --build-arg HUGGINGFACE_ACCESS_TOKEN=<your-huggingface-token> \
+  --build-arg HUGGINGFACE_ACCESS_TOKEN=<your-hf-token>     \ # blank ok: default mirrors are public
+  --build-arg CIVITAI_API_TOKEN=<your-civitai-api-token>   \ # blank ok
+  --build-arg ANIMOSITY_URL=<civitai-download-url>         \ # see below
   -t <your_dockerhub_username>/runpod-worker-comfy:krea2-identity .
 ```
 
+### The Animosity Krea2 checkpoint
+
+Civitai checkpoint URLs contain a per-version id, so paste the exact link for the **Krea2_V1.0_int8_convrot** version from [the Animosity page](https://civitai.com/models/2596298/animosity) (right-click its Download button → copy link, format `https://civitai.com/api/download/models/<versionId>`) and pass it as `ANIMOSITY_URL`.
+
+If you already have the file locally, you can skip the URL entirely: drop it into
+
+```
+downloads/diffusion_models/Krea 2/Your models/Animosity_Krea2_V1.0_int8_convrot.safetensors
+```
+
+before building — everything under `downloads/` is merged into `/comfyui/models/` (Dockerfile stage 3).
+
 > [!NOTE]
-> Always add `--platform linux/amd64` — RunPod workers run on amd64.
+> Always add `--platform linux/amd64` — RunPod workers run on amd64. The full image is ~30 GB; use a Container Disk of 35 GB+ on RunPod.
 
-## Config
+## Config (runtime environment variables)
 
-| Environment Variable        | Description                                                                                                                                                                           | Default         |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `REFRESH_WORKER`            | Stop the worker after each finished job to have a clean state, see [official documentation](https://docs.runpod.io/docs/handler-additional-controls#refresh-worker).                  | `false`         |
-| `COMFY_HOST`                | Host where ComfyUI is running.                                                                                                                                                        | `127.0.0.1:8188`|
-| `COMFY_OUTPUT_PATH`         | Directory where ComfyUI stores generated images.                                                                                                                                      | `/comfyui/output`|
-| `COMFY_POLLING_INTERVAL_MS` | Time to wait between poll attempts in milliseconds.                                                                                                                                   | `250`           |
-| `COMFY_POLLING_MAX_RETRIES` | Maximum number of poll attempts. Increase this the longer your workflow runs.                                                                                                         | `500`           |
-| `COMFY_API_AVAILABLE_INTERVAL_MS` | Time to wait between ComfyUI API availability checks in milliseconds.                                                                                                          | `50`            |
-| `COMFY_API_AVAILABLE_MAX_RETRIES` | Maximum number of ComfyUI API availability check attempts.                                                                                                                       | `500`           |
-| `SERVE_API_LOCALLY`         | Enable local API server for development and testing. See [Local Testing](#local-testing).                                                                                             | disabled        |
+| Environment Variable        | Description                                                                          | Default          |
+| --------------------------- | ------------------------------------------------------------------------------------ | ---------------- |
+| `REFRESH_WORKER`            | Stop the worker after each finished job for a clean state.                           | `false`          |
+| `COMFY_HOST`                | Host where ComfyUI is running.                                                       | `127.0.0.1:8188` |
+| `COMFY_OUTPUT_PATH`         | Directory where ComfyUI stores generated images.                                     | `/comfyui/output`|
+| `COMFY_POLLING_INTERVAL_MS` | Time between poll attempts (ms). Increase for longer workflows.                      | `250`            |
+| `COMFY_POLLING_MAX_RETRIES` | Max poll attempts.                                                                     | `500`            |
+| `COMFY_API_AVAILABLE_INTERVAL_MS` | Time between ComfyUI availability checks (ms).                                 | `50`             |
+| `COMFY_API_AVAILABLE_MAX_RETRIES` | Max availability check attempts.                                               | `500`            |
+| `SERVE_API_LOCALLY`         | Start the local API server for development (see [Local testing](#local-testing)).    | disabled         |
 
-### Upload image to AWS S3
+### Upload image to AWS S3 (optional)
 
-Only needed if you want the generated picture uploaded to AWS S3. Without it, the image is returned as a base64-encoded string.
+Without S3 the final image is returned as a base64 string. To upload instead:
 
-| Environment Variable       | Description                                             | Example                                      |
-| -------------------------- | ------------------------------------------------------- | -------------------------------------------- |
-| `BUCKET_ENDPOINT_URL`      | The endpoint URL of your S3 bucket.                     | `https://<bucket>.s3.<region>.amazonaws.com` |
-| `BUCKET_ACCESS_KEY_ID`     | Your AWS access key ID for accessing the S3 bucket.     | `AKIAIOSFODNN7EXAMPLE`                       |
-| `BUCKET_SECRET_ACCESS_KEY` | Your AWS secret access key for accessing the S3 bucket. | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`   |
+| Environment Variable       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
+| `BUCKET_ENDPOINT_URL`      | `https://<bucket>.s3.<region>.amazonaws.com`            |
+| `BUCKET_ACCESS_KEY_ID`     | AWS access key ID                                       |
+| `BUCKET_SECRET_ACCESS_KEY` | AWS secret access key                                   |
 
-## Use the Docker image on RunPod
+## Deploy on RunPod
 
-### Create your template (optional)
+1. Push the built image to Docker Hub (or any registry).
+2. [Create a template](https://runpod.io/console/serverless/user/templates): Container Image `<your_username>/runpod-worker-comfy:krea2-identity`, Container Disk **35 GB**, your registry credentials.
+3. [Create an endpoint](https://www.runpod.io/console/serverless/user/endpoints): GPU with **≥ 24 GB VRAM** (RTX 4090 / A5000 minimum, A100/L40S comfortable), Flash Boot enabled.
 
-- Create a [new template](https://runpod.io/console/serverless/user/templates) by clicking on `New Template`
-- In the dialog, configure:
-  - Template Name: `runpod-worker-comfy-krea2`
-  - Template Type: serverless
-  - Container Image: `<your_dockerhub_username>/runpod-worker-comfy:krea2-identity`
-  - Container Registry Credentials: your Docker Hub credentials (the image is private unless you push it publicly)
-  - Container Disk: **35 GB** (the image with models is ~30 GB)
-  - (optional) Environment Variables: [Configure S3](#upload-image-to-aws-s3)
-- Click on `Save Template`
-
-### Create your endpoint
-
-- Navigate to [`Serverless > Endpoints`](https://www.runpod.io/console/serverless/user/endpoints) and click on `New Endpoint`
-- In the dialog, configure:
-  - Endpoint Name: `comfy-krea2`
-  - Worker configuration: **a GPU with at least 24 GB VRAM** (e.g. RTX 4090 / A5000 for tight fp8 runs, A100/L40S comfortably)
-  - Active Workers: `0` (whatever makes sense for you)
-  - Max Workers: `3` (whatever makes sense for you)
-  - GPUs/Worker: `1`
-  - Idle Timeout: `5`
-  - Flash Boot: `enabled`
-  - Select Template: `runpod-worker-comfy-krea2`
-- Click `deploy`
-
-### GPU recommendations
-
-| Model                | Minimum VRAM | Container Size |
-| -------------------- | ------------ | -------------- |
-| Krea 2 (fp8) + LoRA  | 24 GB        | ~30 GB         |
-
-## API specification
-
-The worker accepts the standard RunPod serverless input. Only the fields sent via `input` are described here; see the [official documentation](https://docs.runpod.io/docs/serverless-usage) for the full job format.
+## Using the API
 
 ### JSON Request Body
 
 ```json
 {
   "input": {
-    "workflow": {},
+    "workflow": { ... see test_input.json ... },
     "images": [
-      {
-        "name": "source_image.png",
-        "image": "base64_encoded_string"
-      },
-      {
-        "name": "reference_image.png",
-        "image": "base64_encoded_string"
-      }
+      { "name": "source_image.png",    "image": "<base64 of the photo to keep>" },
+      { "name": "reference_image.png", "image": "<base64 of the headshot>" }
     ]
   }
 }
 ```
 
-### Fields
+🚨 RunPod limits the request body to 10 MB (`/run`) / 20 MB (`/runsync`) — resize inputs to ~1–1.5 MP before base64-encoding. The workflow reads any aspect ratio; the output follows the source image's dimensions (long side ≤ 1640).
 
-| Field Path       | Type   | Required | Description                                                                                                                               |
-| ---------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `input`          | Object | Yes      | The top-level object containing the request data.                                                                                          |
-| `input.workflow` | Object | Yes      | The ComfyUI workflow, **exported in API format**.                                                                                          |
-| `input.images`   | Array  | No       | Images uploaded into ComfyUI's `input` folder; the workflow references them by `name`. For this workflow: the scene to edit + the identity reference photo. |
-
-#### "input.images"
-
-Each image needs a unique `name` and a base64-encoded `image`.
-
-🚨 The request body is limited to 10 MB for `/run` and 20 MB for `/runsync`, so don't send huge images (resize inputs to ~1–1.5 MP).
-
-## Interact with your RunPod API
-
-1. **Generate an API Key** in [User Settings > API Keys](https://www.runpod.io/console/serverless/user/settings).
-2. **Find your [Endpoint ID](https://www.runpod.io/console/serverless)** (shown underneath the endpoint name).
-
-### Health status
-
-```bash
-curl -H "Authorization: Bearer <api_key>" https://api.runpod.ai/v2/<endpoint_id>/health
-```
-
-### Identity edit / head swap example
-
-The example below sends two images — the scene/person to edit (`source_image.png`) and the identity to apply (`reference_image.png`) — together with the workflow from [test_input.json](./test_input.json):
+### Example (sync)
 
 ```bash
 curl -X POST -H "Authorization: Bearer <api_key>" -H "Content-Type: application/json" \
-  -d '{
-    "input": {
-      "workflow": { ... API-format workflow, see test_input.json ... },
-      "images": [
-        {"name": "source_image.png", "image": "<base64>"},
-        {"name": "reference_image.png", "image": "<base64>"}
-      ]
-    }
-  }' \
+  -d @test_input.json \
   https://api.runpod.ai/v2/<endpoint_id>/runsync
 ```
 
-A head swap is the same graph with an instruction like:
-
-> "Remove the head of the person in the scene. Put the head from the reference photo onto the person, keep the hair, its color and length, the eye color, the nose and the jaw."
-
-Example response (base64 image, no S3 configured):
+Response (base64 image, no S3 configured):
 
 ```json
 {
-  "delayTime": 2188,
-  "executionTime": 22970,
-  "id": "sync-c0cd1eb2-0699-4416-9333-5e624a80ec3c-e1",
   "output": { "message": "base64encodedimage", "status": "success" },
   "status": "COMPLETED"
 }
 ```
 
-## How to get the workflow from ComfyUI?
+### Useful tweaks inside `input.workflow`
 
-- Open ComfyUI in the browser
-- Open the `Settings` (gear icon) and enable `Dev mode Options`
-- Click `Save (API Format)` — this downloads `workflow_api.json`
-- Put its content into the `workflow` field of your request
+| You want to… | Edit |
+| ------------ | ---- |
+| Change the instruction | node `"244"` → `inputs.positive` |
+| Change the seed | nodes `"167"` and `"58"` → `inputs.seed` |
+| Enable the optional Lenovo realism LoRA | node `"208"` → `LORA_1.on = true` (and strength) |
+| Stop removing the headshot background | remove node `"234"` and point node `"236"`'s `any_01` to `["174", 0]` |
+| Also remove the source photo background | add an `RMBG` node for node `"1"` and point node `"235"`'s `any_01` to it |
+| Change upscale factor | node `"58"` → `inputs.upscale_by` |
 
-The UI-format version of the workflow lives in [test_resources/workflows/](./test_resources/workflows/).
+The original UI-format workflow (loadable in the ComfyUI frontend) is kept in [test_resources/workflows/](./test_resources/workflows/).
 
-## Bring Your Own Models and Nodes
+## Bring your own models / nodes
 
-### Network Volume
-
-Using a Network Volume allows you to store and access custom models (e.g. extra LoRAs or the Krea 2 Raw variant):
-
-1. [Create a Network Volume](https://docs.runpod.io/pods/storage/create-network-volumes).
-2. Deploy a temporary GPU instance attached to the volume and populate it:
-
-   ```bash
-   cd /workspace
-   for i in checkpoints clip clip_vision configs controlnet embeddings loras upscale_models vae unet diffusion_models text_encoders; do mkdir -p models/$i; done
-   ```
-
-3. [Terminate the temporary instance](https://docs.runpod.io/docs/pods#terminating-a-pod).
-4. Attach the volume in your endpoint configuration under `Advanced > Select Network Volume`.
-
-The folder layout is mapped automatically via [extra_model_paths.yaml](./src/extra_model_paths.yaml) (`/runpod-volume` base path).
-
-### Custom Docker Image
-
-To bake additional models into the image, add download commands to stage 2 of the `Dockerfile`:
-
-```Dockerfile
-RUN curl -fL -o models/loras/Krea2/my_extra_lora.safetensors https://huggingface.co/<user>/<repo>/resolve/main/my_extra_lora.safetensors
-```
-
-To add custom nodes, export a [ComfyUI Manager snapshot](https://github.com/ltdrdata/ComfyUI-Manager?tab=readme-ov-file#snapshot-manager), save it in the root of this repo (next to `snapshot_krea2.json`), and it will be restored during the build.
-
-> [!NOTE]
-> - Some custom nodes download additional models during installation, which increases image size
-> - Many custom nodes increase ComfyUI's startup time
+- **Network Volume:** populate `/workspace/models/...` on a [network volume](https://docs.runpod.io/pods/storage/create-network-volumes) — the layout is mapped via [extra_model_paths.yaml](./src/extra_model_paths.yaml) (`/runpod-volume` base path, incl. `diffusion_models`, `text_encoders`, `loras`, `upscale_models`, …).
+- **Local files at build time:** put anything under `downloads/` (mirroring the `models/` layout).
+- **More custom nodes:** export a [ComfyUI Manager snapshot](https://github.com/ltdrdata/ComfyUI-Manager) and place it next to `snapshot_krea2.json`; it is restored during the build.
 
 ## Local testing
 
-The tests use [test_input.json](./test_input.json).
-
-### Setup
-
-1. Python >= 3.10
-2. `python -m venv venv` and activate it
-3. `pip install -r requirements.txt`
-
-### Testing the RunPod handler
-
-- Run all tests: `python -m unittest discover`
-- Run one test: `python -m unittest tests.test_rp_handler.TestRunpodWorkerComfy.test_valid_input_with_workflow_only`
-
-### Local API
-
-`SERVE_API_LOCALLY=true` starts an API server that simulates the RunPod worker environment (already set in `docker-compose.yml`):
-
 ```bash
-docker-compose up
+python -m venv venv && source ./venv/bin/activate
+pip install -r requirements.txt
+python -m unittest discover        # handler unit tests
 ```
 
-Then send jobs to `http://localhost:8000/runsync` with the same JSON shape as the RunPod API, e.g.:
+Run the full worker locally (needs an NVIDIA GPU):
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d @test_input.json http://localhost:8000/runsync
+docker build --target final --platform linux/amd64 -t runpod-worker-comfy:krea2-identity .
+docker-compose up                  # SERVE_API_LOCALLY=true, ports 8000 (API) + 8188 (ComfyUI)
+curl -X POST -d @test_input.json http://localhost:8000/runsync
 ```
-
-ComfyUI itself is reachable at `http://localhost:8188`.
 
 ## Credits
 
 - Worker base: [blib-la/runpod-worker-comfy](https://github.com/blib-la/runpod-worker-comfy)
-- Workflow: [Lonecat's Krea2 Identity Edit & Head Swap](https://civitai.com/models/2803688/lonecats-krea2-identity-edit) by [lonecatone23](https://civitai.com/user/lonecatone23)
-- Krea 2 nodes: [lbouaraba/comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit)
-- Identity Edit LoRA: [conradlocke/krea2-identity-edit](https://huggingface.co/conradlocke/krea2-identity-edit)
-- Models: [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) (repackaged [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo))
+- Workflow: [Lonecat's Krea2 Identity Edit & Head Swap V6.0.2](https://civitai.com/models/2803688/lonecats-krea2-identity-edit) by [lonecatone23](https://civitai.com/user/lonecatone23)
+- Identity-edit nodes + LoRA: [lbouaraba/comfyui-krea2edit](https://github.com/lbouaraba/comfyui-krea2edit), [conradlocke/krea2-identity-edit](https://huggingface.co/conradlocke/krea2-identity-edit)
+- Models: [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2), [martineux/altkreas](https://huggingface.co/martineux/altkreas), [Animosity (Civitai)](https://civitai.com/models/2596298/animosity), [Lenovo UltraReal (Civitai)](https://civitai.com/models/1662740/lenovo-ultrareal), [OpenModelDB](https://openmodeldb.info/models/1x-ITF-SkinDiffDetail-Lite-v1), [1038lab/RMBG-2.0](https://huggingface.co/1038lab/RMBG-2.0)
