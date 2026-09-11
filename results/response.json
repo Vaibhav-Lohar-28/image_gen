@@ -1,8 +1,11 @@
 {
-  "delayTime": 31651,
-  "error": "Error queuing workflow: HTTP Error 400: Bad Request",
-  "executionTime": 3745,
-  "id": "223692d2-e066-4670-8cfa-aa7343d10c08-e1",
-  "status": "FAILED",
-  "workerId": "fa9pv8bwggz5ef"
+  "delayTime": 11369,
+  "executionTime": 2566,
+  "id": "e5b63619-e89c-4139-9794-959bec0fdefa-e1",
+  "output": {
+    "message": "the image does not exist in the specified output folder: /comfyui/output/{}",
+    "status": "error"
+  },
+  "status": "COMPLETED",
+  "workerId": "gmn2cq13ttodr5"
 }
