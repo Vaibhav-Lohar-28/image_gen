@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y \
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install comfy-cli
+
 RUN pip install comfy-cli
 
 # Install ComfyUI (v0.34.0 = native Krea 2 support + ImageStitch/Math core nodes)
