@@ -67,9 +67,9 @@ RUN pip install --no-cache-dir opencv-python-headless transformers timm
 # Start container
 CMD ["/start.sh"]
 
-# =============================================================================
+# ======================================================================
 # Stage 2: Download the models needed by the workflow
-# =============================================================================
+# ======================================================================
 FROM base AS downloader
 
 # --- Credentials (all optional / can stay blank) -----------------------------
