@@ -76,7 +76,7 @@ FROM base AS downloader
 # Hugging Face token: only needed for gated repos. The default mirrors below
 # are public, so you can leave it blank.
 ARG HUGGINGFACE_ACCESS_TOKEN=""
-# Civitai API token: some Civitai downloads benefit from a token. Optional.
+# Civitai API token: some Civitai downloads benefit from a token. Optional. 
 ARG CIVITAI_API_TOKEN="309b095068c86e2c40756380f97199c8"
 
 # --- Direct download links (override if files move) --------------------------
@@ -105,7 +105,7 @@ RUN mkdir -p \
 
 # Downloads automatically use the Hugging Face token when it is provided.
 RUN AUTH=""; \
-    if [ -n "${HUGGINGFACE_ACCESS_TOKEN}" ]; then AUTH="Authorization: Bearer ${HUGGINGFACE_ACCESS_TOKEN}"; fi; \
+    if [ -n "${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}" ]; then AUTH="Authorization: Bearer ${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}"; fi; \
     dl() { echo "runpod-worker-comfy: downloading $1"; curl -fL --retry 3 --retry-delay 5 ${AUTH:+--header "$AUTH"} -o "$1" "$2"; }; \
     dl models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors \
        "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors" && \
