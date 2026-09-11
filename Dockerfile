@@ -94,6 +94,7 @@ SHELL ["/bin/bash", "-c"]
 
 WORKDIR /comfyui
 
+
 RUN mkdir -p \
     "models/diffusion_models/Krea 2/Your models" \
     "models/text_encoders" \
